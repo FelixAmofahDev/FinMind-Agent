@@ -39,3 +39,10 @@ async def invoke_agent(request: AgentRequest) -> AgentResponse:
             "updated_conversation_state": None,
             "updated_summary": None,
         }
+
+        try:
+            result = await graph.ainvoke(state)
+        except RuntimeError as exc:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+    return AgentResponse(reply=result.get("llm_response", ""), conversationId=validated.conversationId)

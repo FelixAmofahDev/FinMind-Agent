@@ -17,4 +17,6 @@ class StateRepository:
         )
         return result.scalar_one_or_none()
 
- 
+    async def upsert(self, state: ConversationState) -> None:
+        """Insert or update a ConversationState."""
+        self.session.add(state)
