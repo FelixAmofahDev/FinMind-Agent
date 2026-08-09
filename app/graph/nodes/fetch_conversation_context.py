@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+
 from app.database.repositories.message_repository import MessageRepository
 from app.graph.state import AgentState
 
@@ -18,10 +20,15 @@ async def fetch_conversation_context(state: AgentState) -> AgentState:
         repo = MessageRepository(session)
         messages = await repo.get_recent_by_conversation_id(conversation_id, limit=5)
 
-        # Format messages for context
         formatted_messages = []
         for msg in messages:
-            formatted_messages.append({"role": msg.role, "content": msg.content})
+            role = msg.role.value if hasattr(msg.role, "value") else str(msg.role)
+            if role == "user":
+                formatted_messages.append(HumanMessage(content=msg.content))
+            elif role == "assistant":
+                formatted_messages.append(AIMessage(content=msg.content))
+            elif role == "system":
+                formatted_messages.append(SystemMessage(content=msg.content))
 
         state["recent_messages"] = formatted_messages
         logger.debug(f"Fetched {len(formatted_messages)} recent messages for {conversation_id}")

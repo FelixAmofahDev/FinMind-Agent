@@ -33,13 +33,14 @@ async def invoke_agent(request: AgentRequest) -> AgentResponse:
             "state_is_sufficient": True,
             "recent_messages": [],
             "relevant_summary": None,
-            "tool_needed": False,
+            "messages": [],
             "tool_name": None,
-            "tool_result": None,
-            "llm_context": "",
+            "tool_calls": None,
+            "tool_results": None,
             "llm_response": None,
             "updated_conversation_state": None,
             "updated_summary": None,
+            "updated_topics": None,
         }
 
         try:

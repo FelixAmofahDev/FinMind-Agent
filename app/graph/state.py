@@ -16,16 +16,17 @@ class AgentState(TypedDict, total=False):
     state_is_sufficient: bool
     recent_messages: list
     relevant_summary: dict | None
+    messages: list
 
     # Tool execution
-    tool_needed: bool
     tool_name: str | None
-    tool_result: dict | None
+    tool_calls: list | None
+    tool_results: dict | None
 
     # LLM
-    llm_context: str
     llm_response: str | None
 
     # Output
     updated_conversation_state: dict | None
     updated_summary: str | None
+    updated_topics: dict | None

@@ -17,12 +17,15 @@ def merge_entities(existing_state: dict, incoming_state: dict) -> dict:
 
 
 def update_state(state: AgentState) -> AgentState:
+    tool_name = state.get("tool_name")
+    tool_results = state.get("tool_results")
+    last_tool_result = tool_results.get(tool_name) if tool_name and tool_results else None
+
     state["updated_conversation_state"] = {
         "currentTopic": "general",
         "currentIntent": "respond",
         "state": merge_entities({}, {}),
-        "lastToolUsed": None,
-        "lastToolResult": None,
+        "lastToolUsed": tool_name,
+        "lastToolResult": last_tool_result,
     }
-    state["updated_summary"] = "No summary yet"
     return state
