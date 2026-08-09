@@ -33,17 +33,16 @@ def build_graph():
 
     workflow.set_entry_point("load_state")
     workflow.add_edge("load_state", "check_state_sufficiency")
+    workflow.add_edge("check_state_sufficiency", "fetch_conversation_context")
 
     workflow.add_conditional_edges(
-        "check_state_sufficiency",
-        lambda state: "build_context" if state["state_is_sufficient"] else "fetch_conversation_context",
+        "fetch_conversation_context",
+        lambda state: "build_context" if state["state_is_sufficient"] else "fetch_summary_context",
         {
             "build_context": "build_context",
-            "fetch_conversation_context": "fetch_conversation_context",
+            "fetch_summary_context": "fetch_summary_context",
         },
     )
-
-    workflow.add_edge("fetch_conversation_context", "fetch_summary_context")
 
     workflow.add_conditional_edges(
         "fetch_summary_context",
