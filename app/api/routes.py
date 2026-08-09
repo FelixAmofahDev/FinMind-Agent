@@ -5,7 +5,7 @@ from pydantic import ValidationError
 
 from app.database.session import AsyncSessionFactory
 from app.graph.graph import build_graph
-from app.schemas.requests import AgentRequest
+from app.schemas.requests import AgentRequest, generate_cuid
 from app.schemas.responses import AgentResponse
 
 router = APIRouter()
@@ -19,14 +19,16 @@ async def invoke_agent(request: AgentRequest) -> AgentResponse:
     except ValidationError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.errors()) from exc
 
+    conversation_id = validated.conversationId or generate_cuid()
+
     # Create a session for this request
     async with AsyncSessionFactory() as session:
         state = {
             "user_message": validated.message,
             "user_id": validated.userId,
             "business_id": validated.businessId,
-            "conversation_id": validated.conversationId,
-            "session": session,  # Pass session through state for repository access
+            "conversation_id": conversation_id,
+            "session": session,
             "conversation_state": {},
             "state_is_sufficient": True,
             "recent_messages": [],
@@ -45,4 +47,4 @@ async def invoke_agent(request: AgentRequest) -> AgentResponse:
         except RuntimeError as exc:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
-    return AgentResponse(reply=result.get("llm_response", ""), conversationId=validated.conversationId)
+    return AgentResponse(reply=result.get("llm_response", ""), conversationId=conversation_id)

@@ -10,10 +10,18 @@ UUID_PATTERN = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[
 CUID_PATTERN = re.compile(r"^c[a-z0-9]{24}$")
 
 
+def generate_cuid() -> str:
+    import secrets
+    import string
+
+    alphabet = string.ascii_lowercase + string.digits
+    return "c" + "".join(secrets.choice(alphabet) for _ in range(24))
+
+
 class AgentRequest(BaseModel):
     userId: Annotated[str, Field(min_length=1)]
     businessId: Annotated[str, Field(min_length=1)]
-    conversationId: Annotated[str, Field(min_length=1)]
+    conversationId: Annotated[str | None, Field(default=None, min_length=1)]
     message: Annotated[str, Field(min_length=1)]
 
     @field_validator("userId", "businessId")
@@ -25,7 +33,9 @@ class AgentRequest(BaseModel):
 
     @field_validator("conversationId")
     @classmethod
-    def validate_conversation_id(cls, value: str) -> str:
+    def validate_conversation_id(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
         if not CUID_PATTERN.fullmatch(value):
             raise ValueError("conversationId must use the Prisma cuid format")
         return value

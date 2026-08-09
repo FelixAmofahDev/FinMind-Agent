@@ -5,7 +5,8 @@ from datetime import datetime
 from uuid import uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database.models import ConversationMessage, ConversationState
+from app.database.models import Conversation, ConversationMessage, ConversationMessageRole, ConversationState
+from app.database.repositories.conversation_repository import ConversationRepository
 from app.database.repositories.message_repository import MessageRepository
 from app.database.repositories.state_repository import StateRepository
 from app.graph.state import AgentState
@@ -18,16 +19,32 @@ async def persist(state: AgentState) -> AgentState:
     session: AsyncSession = state["session"]
     conversation_id = state["conversation_id"]
     user_id = state["user_id"]
+    business_id = state.get("business_id")
     user_message = state["user_message"]
     llm_response = state.get("llm_response", "")
-    updated_state_dict = state.get("updated_conversation_state", {})
+    updated_state_dict = state.get("updated_conversation_state") or {}
 
     try:
+        conversation_repo = ConversationRepository(session)
+        conversation = await conversation_repo.get_by_id(conversation_id)
+
+        if not conversation:
+            conversation = Conversation(
+                id=conversation_id,
+                userId=user_id,
+                businessId=business_id,
+                status="active",
+                createdAt=datetime.utcnow(),
+                updatedAt=datetime.utcnow(),
+            )
+            session.add(conversation)
+            await session.flush()
+
         # Save user message
         user_msg = ConversationMessage(
             id=str(uuid4()),
             conversationId=conversation_id,
-            role="user",
+            role=ConversationMessageRole.user,
             content=user_message,
             createdAt=datetime.utcnow(),
         )
@@ -36,7 +53,7 @@ async def persist(state: AgentState) -> AgentState:
         assistant_msg = ConversationMessage(
             id=str(uuid4()),
             conversationId=conversation_id,
-            role="assistant",
+            role=ConversationMessageRole.assistant,
             content=llm_response,
             createdAt=datetime.utcnow(),
         )
@@ -50,12 +67,12 @@ async def persist(state: AgentState) -> AgentState:
         existing_state = await state_repo.get_by_conversation_id(conversation_id)
 
         if existing_state:
-            # Update existing state
-            existing_state.currentTopic = updated_state_dict.get("currentTopic")
-            existing_state.currentIntent = updated_state_dict.get("currentIntent")
-            existing_state.state = updated_state_dict.get("state", {})
-            existing_state.lastToolUsed = updated_state_dict.get("lastToolUsed")
-            existing_state.lastToolResult = updated_state_dict.get("lastToolResult")
+            if updated_state_dict:
+                existing_state.currentTopic = updated_state_dict.get("currentTopic", existing_state.currentTopic)
+                existing_state.currentIntent = updated_state_dict.get("currentIntent", existing_state.currentIntent)
+                existing_state.state = updated_state_dict.get("state", existing_state.state)
+                existing_state.lastToolUsed = updated_state_dict.get("lastToolUsed", existing_state.lastToolUsed)
+                existing_state.lastToolResult = updated_state_dict.get("lastToolResult", existing_state.lastToolResult)
             existing_state.updatedAt = datetime.utcnow()
         else:
             # Create new state

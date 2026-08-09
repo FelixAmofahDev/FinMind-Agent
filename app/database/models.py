@@ -1,7 +1,15 @@
 from __future__ import annotations
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String
+from enum import Enum
+from sqlalchemy import JSON, Boolean, DateTime, Enum as SQLEnum, ForeignKey, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+
+class ConversationMessageRole(str, Enum):
+    user = "user"
+    assistant = "assistant"
+    system = "system"
+    tool = "tool"
 
 
 class Base(DeclarativeBase):
@@ -73,7 +81,7 @@ class ConversationMessage(Base):
 
     id: Mapped[str] = mapped_column(String(255), primary_key=True)
     conversationId: Mapped[str] = mapped_column(String(255), ForeignKey("conversations.id"), nullable=False)
-    role: Mapped[str] = mapped_column(String(50), nullable=False)
+    role: Mapped[ConversationMessageRole] = mapped_column(SQLEnum(ConversationMessageRole, name="ConversationMessageRole"), nullable=False)
     content: Mapped[str] = mapped_column(String, nullable=False)
     createdAt: Mapped[DateTime] = mapped_column(DateTime, nullable=False)
 
