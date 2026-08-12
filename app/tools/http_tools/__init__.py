@@ -137,7 +137,7 @@ async def _list_users_impl(client: ToolHttpClient) -> dict:
 list_users = StructuredTool(
     name="list_users",
     description=(
-        "Return all users in the current business. "
+        "Return all users in the current business including owner and all staff. "
         "Use this when the user asks about staff, team members, employees, or who has access. "
         "Owner and manager roles only. No parameters needed."
     ),
@@ -175,4 +175,93 @@ get_my_profile = StructuredTool(
     ),
     coroutine=_get_my_profile_impl,
     args_schema=None,
+)
+
+
+class ExpenseFilterInput(BaseModel):
+    category: str | None = Field(default=None, description="Filter by expense category (e.g. rent, wages, transport)")
+    from_date: str | None = Field(default=None, description="Start date in YYYY-MM-DD format")
+    to_date: str | None = Field(default=None, description="End date in YYYY-MM-DD format")
+
+
+async def _list_expenses_impl(
+    client: ToolHttpClient,
+    category: str | None = None,
+    from_date: str | None = None,
+    to_date: str | None = None,
+) -> dict:
+    arguments: dict[str, Any] = {}
+    if category is not None:
+        arguments["category"] = category
+    if from_date is not None:
+        arguments["from"] = from_date
+    if to_date is not None:
+        arguments["to"] = to_date
+    return await client.invoke_tool("expenses", arguments)
+
+
+list_expenses = StructuredTool(
+    name="list_expenses",
+    description=(
+        "Return recorded business expenses with totals. "
+        "Use this when the user asks about expenses, spending, costs, rent, wages, transport, or utilities. "
+        "All parameters are optional — omit them to get all expenses."
+    ),
+    coroutine=_list_expenses_impl,
+    args_schema=ExpenseFilterInput,
+)
+
+
+class DateRangeInput(BaseModel):
+    from_date: str | None = Field(default=None, description="Start date in YYYY-MM-DD format (optional)")
+    to_date: str | None = Field(default=None, description="End date in YYYY-MM-DD format (optional)")
+
+
+async def _list_owner_deposits_impl(
+    client: ToolHttpClient,
+    from_date: str | None = None,
+    to_date: str | None = None,
+) -> dict:
+    arguments: dict[str, Any] = {}
+    if from_date is not None:
+        arguments["from"] = from_date
+    if to_date is not None:
+        arguments["to"] = to_date
+    return await client.invoke_tool("owner/deposits", arguments)
+
+
+list_owner_deposits = StructuredTool(
+    name="list_owner_deposits",
+    description=(
+        "Return the history of money the owner deposited into the business (equity contributions, not income). "
+        "Use this when the user asks about owner deposits, capital added, or money they put into the business. "
+        "All parameters are optional — omit them to get all deposits (all time)."
+    ),
+    coroutine=_list_owner_deposits_impl,
+    args_schema=DateRangeInput,
+)
+
+
+async def _list_owner_withdrawals_impl(
+    client: ToolHttpClient,
+    from_date: str | None = None,
+    to_date: str | None = None,
+) -> dict:
+    arguments: dict[str, Any] = {}
+    if from_date is not None:
+        arguments["from"] = from_date
+    if to_date is not None:
+        arguments["to"] = to_date
+    return await client.invoke_tool("owner/withdrawals", arguments)
+
+
+list_owner_withdrawals = StructuredTool(
+    name="list_owner_withdrawals",
+    description=(
+        "Return the history of money the owner withdrew from the business (drawings, not expenses). "
+        "Use this when the user asks about owner withdrawals, drawings, money taken out, or personal use funds. "
+        "All parameters are optional — omit them to get all withdrawals (all time)."
+    ),
+    coroutine=_list_owner_withdrawals_impl,
+    args_schema=DateRangeInput,
 )
