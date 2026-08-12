@@ -16,6 +16,16 @@ async def tool_node(state: AgentState) -> AgentState:
     tool_calls = state.get("tool_calls") or []
     results = {}
     last_tool_name = None
+    tool_client = state.get("tool_http_client")
+
+    if tool_client is None:
+        logger.error("tool_http_client is missing from agent state")
+        for call in tool_calls:
+            tool_name = call["name"]
+            results[tool_name] = {"error": "Tool client not initialized"}
+        state["tool_calls"] = None
+        state["tool_results"] = results
+        return state
 
     for call in tool_calls:
         tool_name = call["name"]
@@ -23,14 +33,20 @@ async def tool_node(state: AgentState) -> AgentState:
         tool_call_id = call.get("id")
         last_tool_name = tool_name
 
-        tool_fn = _TOOL_REGISTRY.get(tool_name)
-        if not tool_fn:
+        tool_entry = _TOOL_REGISTRY.get(tool_name)
+        if not tool_entry:
             logger.error(f"Unknown tool: {tool_name}")
             results[tool_name] = {"error": f"Unknown tool: {tool_name}"}
             continue
 
         try:
-            result = await tool_fn.ainvoke(arguments)
+            raw_coroutine = getattr(tool_entry, "coroutine", None)
+            if raw_coroutine is None:
+                logger.error(f"Tool {tool_name} has no coroutine attribute")
+                results[tool_name] = {"error": f"Tool {tool_name} is not properly configured"}
+                continue
+
+            result = await raw_coroutine(tool_client, **arguments)
             results[tool_name] = result
             logger.info(f"Tool {tool_name} executed successfully")
         except Exception as e:

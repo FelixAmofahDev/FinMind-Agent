@@ -8,7 +8,10 @@ class AgentState(TypedDict, total=False):
     user_message: str
     user_id: str
     business_id: str
+    user_role: str
     conversation_id: str
+    internal_service_key: str
+    tool_http_client: Any  # ToolHttpClient instance bound to the current request identity
     session: Any  # AsyncSession from SQLAlchemy
 
     # State and context

@@ -23,6 +23,7 @@ class AgentRequest(BaseModel):
     businessId: Annotated[str, Field(min_length=1)]
     conversationId: Annotated[str | None, Field(default=None, min_length=1)]
     message: Annotated[str, Field(min_length=1)]
+    userRole: Annotated[str, Field(min_length=1)]
 
     @field_validator("userId", "businessId")
     @classmethod
@@ -38,4 +39,12 @@ class AgentRequest(BaseModel):
             return value
         if not CUID_PATTERN.fullmatch(value):
             raise ValueError("conversationId must use the Prisma cuid format")
+        return value
+
+    @field_validator("userRole")
+    @classmethod
+    def validate_user_role(cls, value: str) -> str:
+        valid_roles = {"owner", "manager", "cashier", "stock_manager"}
+        if value not in valid_roles:
+            raise ValueError(f"userRole must be one of: {', '.join(sorted(valid_roles))}")
         return value
