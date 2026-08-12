@@ -1,0 +1,24 @@
+services:
+  ai_agent:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    
+    # --- Security Hardening Layer ---
+    security_opt:
+      - no-new-privileges:true  # Prevents processes inside container from gaining new privileges via setuid binaries
+    cap_drop:
+      - ALL                    # Drops all default Linux kernel capabilities
+    tmpfs:
+      - /tmp                   # Mounts temporary directory in memory, keeping root filesystem read-only/clean
+    # --------------------------------
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
