@@ -26,6 +26,7 @@ def build_context(state: AgentState) -> AgentState:
     "- Explain financial information clearly to the business owner.\n\n"
 
     "Important rules:\n"
+    "- All financial figures are in Ghana cedis (GHS).\n"
     "- Never invent financial figures.\n"
     "- When financial data is required, use the appropriate tool.\n"
     "- Always base financial answers on the data returned by the tools.\n"

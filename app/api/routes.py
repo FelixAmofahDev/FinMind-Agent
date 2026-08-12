@@ -1,17 +1,22 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Header, status
+import logging
+
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Header, status
 from pydantic import BaseModel, Field, ValidationError
 
 from app.config.settings import settings
 from app.database.session import AsyncSessionFactory
-from app.graph.graph import build_graph
+from app.graph.graph import build_bookkeeping_graph, build_response_graph
 from app.graph.state import AgentState
 from app.schemas.requests import generate_cuid
 from app.services.tool_http_client import ToolHttpClient
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
-graph = build_graph()
+response_graph = build_response_graph()
+bookkeeping_graph = build_bookkeeping_graph()
 
 
 class AskRequest(BaseModel):
@@ -22,9 +27,36 @@ class AskRequest(BaseModel):
     conversationId: str | None = Field(default=None, min_length=1)
 
 
+async def _run_bookkeeping(state: AgentState) -> None:
+    """
+    Runs update_summary + persist AFTER the response has already been
+    sent back to the user.
+
+    IMPORTANT: this must open its OWN database session. The session
+    used for the main request (state["session"]) belongs to the
+    `async with AsyncSessionFactory() as session:` block in
+    invoke_agent, which has already closed by the time this background
+    task runs — reusing it here would raise on a closed session.
+    """
+    try:
+        async with AsyncSessionFactory() as session:
+            state["session"] = session
+            await bookkeeping_graph.ainvoke(state)
+    except Exception:
+        # This runs after the response was already returned, so there's
+        # no request to fail — just log it. A failure here means the
+        # conversation summary didn't update and/or the turn wasn't
+        # persisted; worth alerting on if this shows up repeatedly.
+        logger.exception(
+            "Bookkeeping (update_summary/persist) failed for conversation %s",
+            state.get("conversation_id"),
+        )
+
+
 @router.post("/ask", response_model=dict)
 async def invoke_agent(
     request: AskRequest,
+    background_tasks: BackgroundTasks,
     x_internal_service_key: str | None = Header(default=None, alias="X-Internal-Service-Key"),
 ) -> dict:
     if not x_internal_service_key:
@@ -76,8 +108,13 @@ async def invoke_agent(
         }
 
         try:
-            result = await graph.ainvoke(state)
+            result = await response_graph.ainvoke(state)
         except RuntimeError as exc:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+    # Summary generation (an extra LLM call) and DB persistence happen
+    # AFTER the response is sent — the user doesn't need to wait on
+    # bookkeeping to get their answer.
+    background_tasks.add_task(_run_bookkeeping, result)
 
     return {"conversationId": conversation_id, "answer": result.get("llm_response", "")}

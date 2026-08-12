@@ -17,7 +17,8 @@ from app.graph.nodes.update_summary import update_summary
 from app.graph.nodes.persist import persist
 
 
-def build_graph():
+def build_response_graph():
+    """Everything needed to produce the answer."""
     workflow = StateGraph(AgentState)
 
     workflow.add_node("load_state", load_state)
@@ -28,8 +29,6 @@ def build_graph():
     workflow.add_node("call_llm", call_llm)
     workflow.add_node("tool_node", tool_node)
     workflow.add_node("update_state", update_state)
-    workflow.add_node("update_summary", update_summary)
-    workflow.add_node("persist", persist)
 
     workflow.set_entry_point("load_state")
     workflow.add_edge("load_state", "check_state_sufficiency")
@@ -41,14 +40,22 @@ def build_graph():
     workflow.add_conditional_edges(
         "call_llm",
         lambda state: "tool_node" if state.get("tool_calls") else "update_state",
-        {
-            "tool_node": "tool_node",
-            "update_state": "update_state",
-        },
+        {"tool_node": "tool_node", "update_state": "update_state"},
     )
 
     workflow.add_edge("tool_node", "call_llm")
-    workflow.add_edge("update_state", "update_summary")
+    workflow.add_edge("update_state", END)
+
+    return workflow.compile()
+
+
+def build_bookkeeping_graph():
+    """Runs after the response is already sent to the user."""
+    workflow = StateGraph(AgentState)
+    workflow.add_node("update_summary", update_summary)
+    workflow.add_node("persist", persist)
+
+    workflow.set_entry_point("update_summary")
     workflow.add_edge("update_summary", "persist")
     workflow.add_edge("persist", END)
 

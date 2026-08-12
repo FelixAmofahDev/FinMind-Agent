@@ -58,6 +58,7 @@ class ToolHttpClient:
         try:
             body = response.json()
             if isinstance(body, dict) and "data" in body:
+                print(body['data'])
                 return body["data"]
             return body
         except Exception as exc:

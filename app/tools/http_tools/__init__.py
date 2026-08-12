@@ -65,6 +65,17 @@ class DateRangeInput(BaseModel):
     )
 
 
+class NoInput(BaseModel):
+    """Schema for tools that take no arguments at all.
+
+    Newer langchain_core versions require every StructuredTool to
+    have an explicit args_schema — it no longer infers an empty one
+    for zero-argument tools automatically. This model exists purely
+    to satisfy that requirement.
+    """
+    pass
+
+
 # ============================================================
 # Tool Factory
 # ============================================================
@@ -137,6 +148,7 @@ def create_tools(client: ToolHttpClient) -> list[StructuredTool]:
             "No parameters are required."
         ),
         coroutine=get_cash_position_impl,
+        args_schema=NoInput,
     )
 
     # ========================================================
@@ -160,6 +172,7 @@ def create_tools(client: ToolHttpClient) -> list[StructuredTool]:
             "No parameters are required."
         ),
         coroutine=get_debtors_summary_impl,
+        args_schema=NoInput,
     )
 
     # ========================================================
@@ -182,6 +195,7 @@ def create_tools(client: ToolHttpClient) -> list[StructuredTool]:
             "No parameters are required."
         ),
         coroutine=get_creditors_summary_impl,
+        args_schema=NoInput,
     )
 
     # ========================================================
@@ -245,6 +259,7 @@ def create_tools(client: ToolHttpClient) -> list[StructuredTool]:
             "No parameters are required."
         ),
         coroutine=list_users_impl,
+        args_schema=NoInput,
     )
 
     # ========================================================
@@ -268,6 +283,7 @@ def create_tools(client: ToolHttpClient) -> list[StructuredTool]:
             "No parameters are required."
         ),
         coroutine=get_business_profile_impl,
+        args_schema=NoInput,
     )
 
     # ========================================================
@@ -291,6 +307,7 @@ def create_tools(client: ToolHttpClient) -> list[StructuredTool]:
             "No parameters are required."
         ),
         coroutine=get_my_profile_impl,
+        args_schema=NoInput,
     )
 
     # ========================================================
