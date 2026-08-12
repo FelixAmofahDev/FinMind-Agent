@@ -56,7 +56,10 @@ class ToolHttpClient:
             return {"error": f"Tool execution failed with status {response.status_code}"}
 
         try:
-            return response.json()
+            body = response.json()
+            if isinstance(body, dict) and "data" in body:
+                return body["data"]
+            return body
         except Exception as exc:
             logger.error("Failed to parse tool response: %s", exc)
             return {"error": "Invalid response from tool endpoint"}
