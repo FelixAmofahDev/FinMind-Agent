@@ -7,7 +7,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from app.database.repositories.message_repository import MessageRepository
 from app.graph.state import AgentState
-
+from app.config.settings import settings
 logger = logging.getLogger(__name__)
 
 
@@ -18,7 +18,7 @@ async def fetch_conversation_context(state: AgentState) -> AgentState:
 
     try:
         repo = MessageRepository(session)
-        messages = await repo.get_recent_by_conversation_id(conversation_id, limit=5)
+        messages = await repo.get_recent_by_conversation_id(conversation_id, settings.CONVERSATION_LIMIT)
 
         formatted_messages = []
         for msg in messages:

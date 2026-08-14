@@ -11,9 +11,13 @@ load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 class Settings:
     DATABASE_URL: str = os.getenv("DATABASE_URL", "")
-    GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
+    LLM_API_KEY: str = os.getenv("LLM_API_KEY", "")
+    LLM_MODEL_NAME: str = os.getenv("LLM_MODEL_NAME", "llama-3.1-8b-instant")
+    BOOKKEEPING_LLM_MODEL_NAME: str = os.getenv("BOOKKEEPING_LLM_MODEL_NAME", "llama-3.3-70b-versatile")
+    CONVERSATION_LIMIT: str = os.getenv("CONVERSATION_LIMIT", 10)
     INTERNAL_SERVICE_KEY: str = os.getenv("INTERNAL_SERVICE_KEY", "")
     NODE_BACKEND_URL: str = os.getenv("NODE_BACKEND_URL", "https://localhost:3000")
+
 
 
 settings = Settings()

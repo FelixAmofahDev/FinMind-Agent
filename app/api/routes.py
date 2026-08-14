@@ -105,6 +105,8 @@ async def invoke_agent(
             "updated_conversation_state": None,
             "updated_summary": None,
             "updated_topics": None,
+            "is_new_conversation": None,
+            "updated_title": None,
         }
 
         try:

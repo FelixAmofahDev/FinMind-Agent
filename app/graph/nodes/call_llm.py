@@ -13,9 +13,9 @@ logger = logging.getLogger(__name__)
 
 
 def build_llm() -> BaseChatModel:
-    if not settings.GROQ_API_KEY:
+    if not settings.LLM_API_KEY:
         raise RuntimeError("GROQ_API_KEY is not configured")
-    return ChatGroq(model="llama-3.1-8b-instant", api_key=settings.GROQ_API_KEY)
+    return ChatGroq(model=settings.LLM_MODEL_NAME, api_key=settings.LLM_API_KEY)
 
 
 async def call_llm(state: AgentState) -> AgentState:

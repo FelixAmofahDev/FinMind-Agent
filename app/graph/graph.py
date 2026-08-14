@@ -13,7 +13,7 @@ from app.graph.nodes.build_context import build_context
 from app.graph.nodes.call_llm import call_llm
 from app.graph.nodes.tool_node import tool_node
 from app.graph.nodes.update_state import update_state
-from app.graph.nodes.update_summary import update_summary
+from app.graph.nodes.update_summary_and_state import update_summary_state
 from app.graph.nodes.persist import persist
 
 
@@ -52,11 +52,11 @@ def build_response_graph():
 def build_bookkeeping_graph():
     """Runs after the response is already sent to the user."""
     workflow = StateGraph(AgentState)
-    workflow.add_node("update_summary", update_summary)
+    workflow.add_node("update_summary_state", update_summary_state)
     workflow.add_node("persist", persist)
 
-    workflow.set_entry_point("update_summary")
-    workflow.add_edge("update_summary", "persist")
+    workflow.set_entry_point("update_summary_state")
+    workflow.add_edge("update_summary_state", "persist")
     workflow.add_edge("persist", END)
 
     return workflow.compile()

@@ -16,14 +16,17 @@ from app.graph.state import AgentState
 logger = logging.getLogger(__name__)
 
 
-def _generae_title(text: str, max_chars: int = 60) -> str:
+
+
+def _fallback_title(text: str, max_chars: int = 60) -> str:
+    """Deterministic backstop, used only if the LLM didn't produce a title
+    (e.g. update_summary failed) so a conversation is never left untitled."""
     text = re.sub(r"\s+", " ", text).strip()
     for sep in [".", "!", "?", "\n"]:
         if sep in text:
             text = text.split(sep)[0] + sep
             break
     return text[:max_chars].strip()
-
 
 async def persist(state: AgentState) -> AgentState:
     """Persist user message, assistant message, conversation, state, and summary."""
@@ -36,6 +39,8 @@ async def persist(state: AgentState) -> AgentState:
     updated_state_dict = state.get("updated_conversation_state") or {}
     updated_summary = state.get("updated_summary")
     updated_topics = state.get("updated_topics") or {}
+    updated_title = state.get("updated_title")
+
 
     try:
         conversation_repo = ConversationRepository(session)
@@ -46,7 +51,7 @@ async def persist(state: AgentState) -> AgentState:
                 id=conversation_id,
                 userId=user_id,
                 businessId=business_id,
-                title=_generate_title(user_message),
+                title=updated_title or _fallback_title(user_message),
                 status="active",
                 createdAt=datetime.utcnow(),
                 updatedAt=datetime.utcnow(),
@@ -54,8 +59,9 @@ async def persist(state: AgentState) -> AgentState:
             session.add(conversation)
             await session.flush()
         elif not conversation.title:
-            conversation.title = _generate_title(user_message)
+            conversation.title = updated_title or _fallback_title(user_message)
             conversation.updatedAt = datetime.utcnow()
+            print(f"conversation title: {state.get("updated_title")}")
 
         # Save user message
         user_msg = ConversationMessage(
