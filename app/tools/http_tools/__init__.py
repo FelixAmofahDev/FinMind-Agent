@@ -76,6 +76,21 @@ class NoInput(BaseModel):
     pass
 
 
+class DateValidationMixin:
+    """Mixin providing shared date validation logic for tool implementations."""
+
+    @staticmethod
+    def validate_date(value: str, field_name: str) -> None:
+        import re
+        from datetime import datetime
+
+        if not isinstance(value, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+            raise ValueError(
+                f"{field_name} must be a date in YYYY-MM-DD format, got: {value!r}"
+            )
+        datetime.strptime(value, "%Y-%m-%d")
+
+
 # ============================================================
 # Tool Factory
 # ============================================================
@@ -96,6 +111,35 @@ class NoInput(BaseModel):
 # ============================================================
 
 def create_tools(client: ToolHttpClient) -> list[StructuredTool]:
+
+    # ========================================================
+    # CURRENT DATE
+    # ========================================================
+
+    async def get_current_date_impl() -> dict[str, Any]:
+        from datetime import datetime, timezone
+
+        now = datetime.now(timezone.utc)
+        return {
+            "current_date": now.strftime("%Y-%m-%d"),
+            "current_datetime": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "day_of_week": now.strftime("%A"),
+            "month": now.strftime("%B %Y"),
+            "timezone": "UTC",
+        }
+
+    get_current_date = StructuredTool(
+        name="get_current_date",
+        description=(
+            "Return the current UTC date and datetime. "
+            "Use this when the user asks about 'today', 'this month', 'last week', "
+            "'yesterday', or any relative date reference. "
+            "All dates returned are in YYYY-MM-DD format. "
+            "No parameters are required."
+        ),
+        coroutine=get_current_date_impl,
+        args_schema=NoInput,
+    )
 
     # ========================================================
     # PROFIT & LOSS
@@ -427,6 +471,7 @@ def create_tools(client: ToolHttpClient) -> list[StructuredTool]:
     # ========================================================
 
     return [
+        get_current_date,
         get_profit_report,
         get_cash_position,
         get_debtors_summary,

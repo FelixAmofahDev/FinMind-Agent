@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import re
+from datetime import datetime
 
 from langchain_core.messages import ToolMessage
 
@@ -8,6 +10,22 @@ from app.graph.state import AgentState
 from app.tools.tool_registry import create_tool_registry
 
 logger = logging.getLogger(__name__)
+
+DATE_TOOL_ARG_KEYS = {"from_date", "to_date", "from", "to"}
+
+
+def _validate_tool_dates(tool_name: str, arguments: dict) -> None:
+    bad = [
+        f"{key}={value!r}"
+        for key, value in arguments.items()
+        if key in DATE_TOOL_ARG_KEYS and value is not None
+        and not (isinstance(value, str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", value))
+    ]
+    if bad:
+        raise ValueError(
+            f"Tool {tool_name} received invalid date argument(s): {', '.join(bad)}. "
+            "Dates must be in YYYY-MM-DD format."
+        )
 
 
 async def tool_node(state: AgentState) -> AgentState:
@@ -107,6 +125,8 @@ async def tool_node(state: AgentState) -> AgentState:
                 tool_name,
                 arguments,
             )
+
+            _validate_tool_dates(tool_name, arguments)
 
             # IMPORTANT:
             #
