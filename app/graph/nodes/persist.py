@@ -16,7 +16,7 @@ from app.graph.state import AgentState
 logger = logging.getLogger(__name__)
 
 
-def _generate_title(text: str, max_chars: int = 60) -> str:
+def _generae_title(text: str, max_chars: int = 60) -> str:
     text = re.sub(r"\s+", " ", text).strip()
     for sep in [".", "!", "?", "\n"]:
         if sep in text:
