@@ -19,7 +19,15 @@ async def load_state(state: AgentState) -> AgentState:
     try:
         conversation_repo = ConversationRepository(session)
         conversation = await conversation_repo.get_by_id(conversation_id)
-        state["is_new_conversation"] = conversation is None
+        is_new = conversation is None or not conversation.title
+        state["is_new_conversation"] = is_new
+        logger.info(
+            "conversation_id=%s is_new_conversation=%s (exists=%s, title=%r)",
+            conversation_id,
+            is_new,
+            conversation is not None,
+            getattr(conversation, "title", None),
+        )
     except Exception as e:
         logger.error(f"Error checking conversation existence: {e}")
         # Fail safe: if we can't tell, don't assume new — avoids clobbering

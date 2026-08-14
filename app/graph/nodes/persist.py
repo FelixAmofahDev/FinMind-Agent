@@ -58,10 +58,23 @@ async def persist(state: AgentState) -> AgentState:
             )
             session.add(conversation)
             await session.flush()
+            logger.info(
+                "conversation_id=%s created with title=%r (llm=%r, fallback=%r)",
+                conversation_id,
+                conversation.title,
+                updated_title,
+                _fallback_title(user_message) if not updated_title else None,
+            )
         elif not conversation.title:
             conversation.title = updated_title or _fallback_title(user_message)
             conversation.updatedAt = datetime.utcnow()
-            print(f"conversation title: {state.get("updated_title")}")
+            logger.info(
+                "conversation_id=%s title filled with title=%r (llm=%r, fallback=%r)",
+                conversation_id,
+                conversation.title,
+                updated_title,
+                _fallback_title(user_message) if not updated_title else None,
+            )
 
         # Save user message
         user_msg = ConversationMessage(

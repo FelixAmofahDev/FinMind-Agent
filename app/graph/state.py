@@ -17,6 +17,7 @@ class AgentState(TypedDict, total=False):
     # State and context
     conversation_state: dict
     state_is_sufficient: bool
+    is_new_conversation: bool | None
     recent_messages: list
     relevant_summary: dict | None
     messages: list
@@ -33,3 +34,4 @@ class AgentState(TypedDict, total=False):
     updated_conversation_state: dict | None
     updated_summary: str | None
     updated_topics: dict | None
+    updated_title: str | None

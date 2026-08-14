@@ -83,6 +83,12 @@ async def update_summary_state(state: AgentState) -> AgentState:
     current_summary = ""
     current_topics = {}
     is_new = state.get("is_new_conversation")
+    logger.info(
+        "conversation_id=%s is_new from state=%s (raw=%r)",
+        conversation_id,
+        is_new,
+        is_new,
+    )
 
     try:
         summary_repo = SummaryRepository(session)
@@ -94,6 +100,12 @@ async def update_summary_state(state: AgentState) -> AgentState:
             conversation_repo = ConversationRepository(session)
             conversation = await conversation_repo.get_by_id(conversation_id)
             is_new = conversation is None or not conversation.title
+            logger.info(
+                "conversation_id=%s is_new rechecked via DB=%s (title=%r)",
+                conversation_id,
+                is_new,
+                getattr(conversation, "title", None),
+            )
         logger.info(f"is_new={is_new} for conversation {conversation_id}")
 
         prompt = _build_prompt(
@@ -103,6 +115,12 @@ async def update_summary_state(state: AgentState) -> AgentState:
 
         llm = build_llm()
         schema = ConversationExtractionWithTitle if is_new else ConversationExtraction
+        logger.info(
+            "conversation_id=%s using schema=%s is_new=%s",
+            conversation_id,
+            schema.__name__,
+            is_new,
+        )
 
         try:
             response = await llm.with_structured_output(schema).ainvoke(prompt)
@@ -128,6 +146,11 @@ async def update_summary_state(state: AgentState) -> AgentState:
 
         if is_new:
             state["updated_title"] = response.title.strip().strip('"')
+            logger.info(
+                "conversation_id=%s generated title=%r",
+                conversation_id,
+                state["updated_title"],
+            )
 
         logger.info(f"Updated summary/state for conversation {conversation_id}")
     except Exception:
