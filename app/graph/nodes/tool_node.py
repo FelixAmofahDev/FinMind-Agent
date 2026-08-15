@@ -23,9 +23,30 @@ def _validate_tool_dates(tool_name: str, arguments: dict) -> None:
     ]
     if bad:
         raise ValueError(
-            f"Tool {tool_name} received invalid date argument(s): {', '.join(bad)}. "
+            f"Invalid date argument(s): {', '.join(bad)}. "
             "Dates must be in YYYY-MM-DD format."
         )
+
+
+def _format_tool_result(result: dict) -> str:
+    if not isinstance(result, dict):
+        return str(result)
+
+    if "error" in result:
+        return result["error"]
+
+    return str(result)
+
+
+def _sanitize_exception_message(exc: Exception) -> str:
+    message = str(exc)
+    message = re.sub(r'File ".*?", line \d+', '', message)
+    message = re.sub(r'Traceback \(most recent call last\):', '', message)
+    message = re.sub(r'\n\s+at\s+.*', '', message)
+    message = re.sub(r'\s+', ' ', message).strip()
+    if not message:
+        return "An unexpected error occurred."
+    return message
 
 
 async def tool_node(state: AgentState) -> AgentState:
@@ -48,16 +69,13 @@ async def tool_node(state: AgentState) -> AgentState:
         logger.error("tool_http_client is missing from agent state")
 
         results_by_call_id = {
-            call.get("id"): {"error": "Tool client not initialized"}
+            call.get("id"): {"error": "Service temporarily unavailable. Please try again later."}
             for call in tool_calls
         }
 
-        # Every tool_use block the LLM produced still needs a matching
-        # tool_result, even in this failure path — otherwise the next
-        # LLM call will be rejected for having unanswered tool_calls.
         tool_messages = [
             ToolMessage(
-                content=str(results_by_call_id[call.get("id")]),
+                content=_format_tool_result(results_by_call_id[call.get("id")]),
                 tool_call_id=call.get("id"),
             )
             for call in tool_calls
@@ -113,7 +131,7 @@ async def tool_node(state: AgentState) -> AgentState:
                 tool_name,
             )
 
-            error_result = {"error": f"Unknown tool: {tool_name}"}
+            error_result = {"error": "Service temporarily unavailable. Please try again later."}
             results_by_call_id[call_id] = error_result
             results_by_name[tool_name] = error_result
 
@@ -153,7 +171,7 @@ async def tool_node(state: AgentState) -> AgentState:
                 tool_name,
             )
 
-            error_result = {"error": str(exc)}
+            error_result = {"error": _sanitize_exception_message(exc)}
             results_by_call_id[call_id] = error_result
             results_by_name[tool_name] = error_result
 
@@ -178,7 +196,7 @@ async def tool_node(state: AgentState) -> AgentState:
 
         tool_messages.append(
             ToolMessage(
-                content=str(result),
+                content=_format_tool_result(result),
                 tool_call_id=call_id,
             )
         )

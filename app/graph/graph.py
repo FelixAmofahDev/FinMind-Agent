@@ -15,6 +15,7 @@ from app.graph.nodes.tool_node import tool_node
 from app.graph.nodes.update_state import update_state
 from app.graph.nodes.update_summary_and_state import update_summary_state
 from app.graph.nodes.persist import persist
+from app.graph.nodes.sanitize_response import sanitize_response
 
 
 def build_response_graph():
@@ -29,6 +30,7 @@ def build_response_graph():
     workflow.add_node("call_llm", call_llm)
     workflow.add_node("tool_node", tool_node)
     workflow.add_node("update_state", update_state)
+    workflow.add_node("sanitize_response", sanitize_response)
 
     workflow.set_entry_point("load_state")
     workflow.add_edge("load_state", "check_state_sufficiency")
@@ -39,11 +41,12 @@ def build_response_graph():
 
     workflow.add_conditional_edges(
         "call_llm",
-        lambda state: "tool_node" if state.get("tool_calls") else "update_state",
-        {"tool_node": "tool_node", "update_state": "update_state"},
+        lambda state: "tool_node" if state.get("tool_calls") else "sanitize_response",
+        {"tool_node": "tool_node", "sanitize_response": "sanitize_response"},
     )
 
     workflow.add_edge("tool_node", "call_llm")
+    workflow.add_edge("sanitize_response", "update_state")
     workflow.add_edge("update_state", END)
 
     return workflow.compile()

@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 def build_llm() -> BaseChatModel:
     if not settings.LLM_API_KEY:
-        raise RuntimeError("GROQ_API_KEY is not configured")
+        raise RuntimeError("LLM_API_KEY is not configured")
     return ChatGroq(model=settings.LLM_MODEL_NAME, api_key=settings.LLM_API_KEY)
 
 
@@ -36,7 +36,7 @@ async def call_llm(state: AgentState) -> AgentState:
             logger.info(f"LLM call succeeded for conversation {state['conversation_id']}")
     except Exception as e:
         logger.error(f"Error calling LLM: {e}")
-        state["llm_response"] = f"Error: Unable to generate response. {str(e)}"
+        state["llm_response"] = "I'm unable to generate a response right now. Please try again."
         state["tool_calls"] = None
 
     return state

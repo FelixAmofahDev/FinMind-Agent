@@ -41,24 +41,26 @@ class ToolHttpClient:
 
         async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as client:
             response = await client.get(url, params=arguments, headers=headers)
-
+            print(response)
         if response.status_code == 401:
             logger.error("Tool endpoint rejected internal service key")
-            return {"error": "Unauthorized: invalid internal service key"}
+            return {"error": "Unauthorized access to financial service."}
         if response.status_code == 403:
             logger.error("Tool endpoint rejected role authorization")
-            return {"error": "Forbidden: role not authorized for this tool"}
+            return {"error": "You don't have permission to access this information."}
         if response.status_code == 422:
             logger.error("Tool endpoint validation failed: %s", response.text)
-            return {"error": f"Validation error: {response.text}"}
+
         if response.status_code != 200:
             logger.error("Tool endpoint error %s: %s", response.status_code, response.text)
-            return {"error": f"Tool execution failed with status {response.status_code}"}
 
         try:
             body = response.json()
+            if isinstance(body, dict) and body.get("success") is False:
+                message = body.get("message") or "An error occurred while processing your request."
+                logger.error("Tool endpoint returned business error: %s", message)
+                return {"error": message}
             if isinstance(body, dict) and "data" in body:
-                print(body['data'])
                 return body["data"]
             return body
         except Exception as exc:
